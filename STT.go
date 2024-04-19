@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hegedustibor/htgo-tts/voices"
 	"log"
 	"os"
 	"syscall"
@@ -13,7 +14,6 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/hegedustibor/htgo-tts"
 	"github.com/hegedustibor/htgo-tts/handlers"
-	"github.com/hegedustibor/htgo-tts/voices"
 	"github.com/joho/godotenv"
 )
 
