@@ -5,10 +5,24 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
+	"unsafe"
+	"syscall"
+	"time"
 
 	aai "github.com/AssemblyAI/assemblyai-go-sdk"
 )
+
+var (
+	winmm         = syscall.MustLoadDLL("winmm.dll")
+	mciSendString = winmm.MustFindProc("mciSendStringW")
+)
+
+func MCIWorker(lpstrCommand string, lpstrReturnString string, uReturnLength int, hwndCallback int) uintptr {
+	i, _, _ := mciSendString.Call(uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(lpstrCommand))),
+		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(lpstrReturnString))),
+		uintptr(uReturnLength), uintptr(hwndCallback))
+	return i
+}
 
 func main() {
 	record()
@@ -16,20 +30,41 @@ func main() {
 }
 
 func record() {
-	//I dont know why it doesn't overrite the file, so imma just delete it since it makes a new one anyway
-	os.Remove("sample.mp3")
-	cmd := exec.Command("ffmpeg", "-f", "dshow", "-i", "audio=Mikrofon (2 — Realtek(R) Audio)", "sample.mp3")
-	err := cmd.Run()
-	fmt.Println("Mów teraz. Gdy skończysz naciśnik CTRL + C")
-	if err != nil {
-		log.Fatal(err)
+	fmt.Println("winmm.dll Record Audio to .wav file")
+
+	i := MCIWorker("open new type waveaudio alias capture", "", 0, 0)
+	if i != 0 {
+		log.Fatal("Error Code A: ", i)
 	}
+
+	i = MCIWorker("record capture", "", 0, 0)
+	if i != 0 {
+		log.Fatal("Error Code B: ", i)
+	}
+
+	fmt.Println("Listening...")
+	fmt.Println("Press any key to stop listening")
+	fmt.Scanln()
+
+	time.Sleep(10 * time.Second)
+
+	i = MCIWorker("save capture mic.wav", "", 0, 0)
+	if i != 0 {
+		log.Fatal("Error Code C: ", i)
+	}
+
+	i = MCIWorker("close capture", "", 0, 0)
+	if i != 0 {
+		log.Fatal("Error Code D: ", i)
+	}
+
+	fmt.Println("Audio saved to mic.wav")
 }
 
 func transcribe() {
 	const API_KEY = "API_KEY"
 	client := aai.NewClient(API_KEY)
-	f, err := os.Open("sample.mp3")
+	f, err := os.Open("mic.wav")
 	if err != nil {
 		log.Fatal(err)
 	}
