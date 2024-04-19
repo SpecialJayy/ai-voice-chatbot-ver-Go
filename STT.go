@@ -2,14 +2,23 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
-	"unsafe"
 	"syscall"
-	"time"
+	"unsafe"
 
 	aai "github.com/AssemblyAI/assemblyai-go-sdk"
+	"github.com/go-resty/resty/v2"
+	"github.com/hegedustibor/htgo-tts"
+	"github.com/hegedustibor/htgo-tts/handlers"
+	"github.com/hegedustibor/htgo-tts/voices"
+	"github.com/joho/godotenv"
+)
+
+const (
+	apiEndpoint = "https://api.openai.com/v1/chat/completions"
 )
 
 var (
@@ -22,11 +31,6 @@ func MCIWorker(lpstrCommand string, lpstrReturnString string, uReturnLength int,
 		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(lpstrReturnString))),
 		uintptr(uReturnLength), uintptr(hwndCallback))
 	return i
-}
-
-func main() {
-	record()
-	transcribe()
 }
 
 func record() {
@@ -46,7 +50,7 @@ func record() {
 	fmt.Println("Press any key to stop listening")
 	fmt.Scanln()
 
-	time.Sleep(10 * time.Second)
+	//time.Sleep(10 * time.Second)
 
 	i = MCIWorker("save capture mic.wav", "", 0, 0)
 	if i != 0 {
@@ -61,8 +65,12 @@ func record() {
 	fmt.Println("Audio saved to mic.wav")
 }
 
-func transcribe() {
-	const API_KEY = "API_KEY"
+func transcribe() string {
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
+	var API_KEY = os.Getenv("AAI_API_KEY")
 	client := aai.NewClient(API_KEY)
 	f, err := os.Open("mic.wav")
 	if err != nil {
@@ -73,5 +81,64 @@ func transcribe() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(*transcript.Text)
+	fmt.Println("text: " + *transcript.Text)
+	return *transcript.Text
+}
+
+func sendQueryToChatGpt(query string) (string, error) {
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
+	apiKey := os.Getenv("OPENAI_API_KEY")
+	client := resty.New()
+
+	response, err := client.R().
+		SetAuthToken(apiKey).
+		SetHeader("Content-Type", "application/json").
+		SetBody(map[string]interface{}{
+			"model": "gpt-3.5-turbo",
+			"messages": []interface{}{map[string]interface{}{
+				"role":    "system",
+				"content": query,
+			}},
+		}).
+		Post(apiEndpoint)
+
+	if err != nil {
+		return "", err
+	}
+
+	body := response.Body()
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
+
+	if err != nil {
+		return "", err
+	}
+
+	content := data["choices"].([]interface{})[0].(map[string]interface{})["message"].(map[string]interface{})["content"].(string)
+
+	return content, nil
+}
+
+func convertTextToAudioAndSaveMp3ToLocation(text string, location string) error {
+	speech := htgotts.Speech{Folder: location, Language: voices.English, Handler: &handlers.Native{}}
+	err := speech.Speak(text)
+	return err
+}
+
+func main() {
+	record()
+	query := transcribe()
+	answer, err := sendQueryToChatGpt(query)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(answer)
+	err = convertTextToAudioAndSaveMp3ToLocation(answer, "audio")
+	if err != nil {
+		fmt.Println(err)
+	}
 }
