@@ -6,21 +6,18 @@ import (
 	"github.com/faiface/beep"
 	"github.com/faiface/beep/mp3"
 	"github.com/faiface/beep/speaker"
-	"github.com/joho/godotenv"
 	"github.com/sashabaranov/go-openai"
 	"io"
-	"log"
 	"os"
 	"time"
 )
 
+var (
+	apiKey = os.Getenv("OPENAI_API_KEY")
+	client = openai.NewClient(apiKey)
+)
+
 func sendQueryToChatGpt(query string) (string, error) {
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatalf("Error loading .env file")
-	}
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	client := openai.NewClient(apiKey)
 	resp, err := client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
@@ -40,13 +37,6 @@ func sendQueryToChatGpt(query string) (string, error) {
 }
 
 func convertTextToAudioAndSaveMp3ToLocation(text string, location string) error {
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatalf("Error loading .env file")
-	}
-	var ApiKey = os.Getenv("OPENAI_API_KEY")
-	client := openai.NewClient(ApiKey)
-
 	resp, err := client.CreateSpeech(
 		context.Background(),
 		openai.CreateSpeechRequest{
@@ -93,7 +83,7 @@ func playMp3Response() error {
 }
 
 func main() {
-	query := "Opisz zasady gry \"kółko i krzyżyk\" najkrócej jak potrafisz."
+	query := "Opisz zasady gry \"Papier Kamień Nożyce\" najbardziej zwięźle jak potrafisz"
 	answer, err := sendQueryToChatGpt(query)
 	if err != nil {
 		fmt.Println(err)
