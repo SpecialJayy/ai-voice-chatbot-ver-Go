@@ -4,6 +4,7 @@ go 1.22.2
 
 require (
 	github.com/AssemblyAI/assemblyai-go-sdk v1.5.0 // indirect
+	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/faiface/beep v1.1.0 // indirect
 	github.com/go-resty/resty/v2 v2.12.0 // indirect
@@ -18,6 +19,7 @@ require (
 	github.com/mjibson/go-dsp v0.0.0-20180508042940-11479a337f12 // indirect
 	github.com/mkb218/gosndfile v0.0.0-20171006180803-e0c9ef895ee2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/sashabaranov/go-openai v1.22.0 // indirect
 	github.com/timshannon/go-openal v0.0.0-20170220204755-e0ed4c67cffe // indirect
 	golang.org/x/exp v0.0.0-20190306152737-a1d7652674e8 // indirect
 	golang.org/x/exp/shiny v0.0.0-20240416160154-fe59bbe5cc7f // indirect

@@ -15,6 +15,7 @@ import (
 	"github.com/hegedustibor/htgo-tts"
 	"github.com/hegedustibor/htgo-tts/handlers"
 	"github.com/joho/godotenv"
+	openai "github.com/sashabaranov/go-openai"
 )
 
 const (
@@ -65,24 +66,22 @@ func record() {
 	fmt.Println("Audio saved to mic.wav")
 }
 
-func transcribe() string {
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatalf("Error loading .env file")
+func transcribe(fileName string) string {
+	apiKey := os.Getenv("OPENAI_API_KEY")
+	connection := openai.NewClient(apiKey)
+	ctx := context.Background()
+
+	req := openai.AudioRequest{
+		Model:    openai.Whisper1,
+		FilePath: fileName,
 	}
-	var API_KEY = os.Getenv("AAI_API_KEY")
-	client := aai.NewClient(API_KEY)
-	f, err := os.Open("mic.wav")
+	resp, err := connection.CreateTranscription(ctx, req)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Printf("Transcription error: %v\n", err)
+		return
 	}
-	defer f.Close()
-	transcript, err := client.Transcripts.TranscribeFromReader(context.TODO(), f, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("text: " + *transcript.Text)
-	return *transcript.Text
+	fmt.Println(resp.Text)
+	return resp.Text
 }
 
 func sendQueryToChatGpt(query string) (string, error) {
@@ -131,7 +130,7 @@ func convertTextToAudioAndSaveMp3ToLocation(text string, location string) error 
 
 func main() {
 	record()
-	query := transcribe()
+	query := transcribe("mic.wav")
 	answer, err := sendQueryToChatGpt(query)
 	if err != nil {
 		fmt.Println(err)
