@@ -10,7 +10,6 @@ import (
 	"syscall"
 	"unsafe"
 
-	aai "github.com/AssemblyAI/assemblyai-go-sdk"
 	"github.com/go-resty/resty/v2"
 	"github.com/hegedustibor/htgo-tts"
 	"github.com/hegedustibor/htgo-tts/handlers"
@@ -78,7 +77,7 @@ func transcribe(fileName string) string {
 	resp, err := connection.CreateTranscription(ctx, req)
 	if err != nil {
 		fmt.Printf("Transcription error: %v\n", err)
-		return
+		return ""
 	}
 	fmt.Println(resp.Text)
 	return resp.Text
