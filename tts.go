@@ -42,7 +42,7 @@ func convertTextToAudioAndSaveMp3ToLocation(text string, location string) error 
 		openai.CreateSpeechRequest{
 			Model: openai.TTSModel1,
 			Input: text,
-			Voice: openai.VoiceOnyx,
+			Voice: openai.VoiceEcho,
 		},
 	)
 	if err != nil {
