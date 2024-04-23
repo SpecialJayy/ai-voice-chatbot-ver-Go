@@ -4,5 +4,7 @@
 /.idea/modules.xml
 /.idea/ai-voice-chatbot-ver-Go.iml
 /.idea/vcs.xml
+/.idea/workspace.xml
 
 *.wav
+*.mp3

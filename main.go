@@ -2,26 +2,22 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"github.com/hegedustibor/htgo-tts/voices"
+	"github.com/faiface/beep"
+	"github.com/faiface/beep/mp3"
+	"github.com/faiface/beep/speaker"
+	"github.com/sashabaranov/go-openai"
+	"io"
 	"log"
 	"os"
 	"syscall"
+	"time"
 	"unsafe"
-
-	"github.com/go-resty/resty/v2"
-	"github.com/hegedustibor/htgo-tts"
-	"github.com/hegedustibor/htgo-tts/handlers"
-	"github.com/joho/godotenv"
-	openai "github.com/sashabaranov/go-openai"
-)
-
-const (
-	apiEndpoint = "https://api.openai.com/v1/chat/completions"
 )
 
 var (
+	apiKey        = os.Getenv("OPENAI_API_KEY")
+	client        = openai.NewClient(apiKey)
 	winmm         = syscall.MustLoadDLL("winmm.dll")
 	mciSendString = winmm.MustFindProc("mciSendStringW")
 )
@@ -52,7 +48,7 @@ func record() {
 
 	//time.Sleep(10 * time.Second)
 
-	i = MCIWorker("save capture mic.wav", "", 0, 0)
+	i = MCIWorker("save capture audio/mic.wav", "", 0, 0)
 	if i != 0 {
 		log.Fatal("Error Code C: ", i)
 	}
@@ -66,15 +62,13 @@ func record() {
 }
 
 func transcribe(fileName string) string {
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	connection := openai.NewClient(apiKey)
 	ctx := context.Background()
 
 	req := openai.AudioRequest{
 		Model:    openai.Whisper1,
-		FilePath: fileName,
+		FilePath: "audio/" + fileName,
 	}
-	resp, err := connection.CreateTranscription(ctx, req)
+	resp, err := client.CreateTranscription(ctx, req)
 	if err != nil {
 		fmt.Printf("Transcription error: %v\n", err)
 		return ""
@@ -84,47 +78,68 @@ func transcribe(fileName string) string {
 }
 
 func sendQueryToChatGpt(query string) (string, error) {
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatalf("Error loading .env file")
-	}
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	client := resty.New()
-
-	response, err := client.R().
-		SetAuthToken(apiKey).
-		SetHeader("Content-Type", "application/json").
-		SetBody(map[string]interface{}{
-			"model": "gpt-3.5-turbo",
-			"messages": []interface{}{map[string]interface{}{
-				"role":    "system",
-				"content": query,
-			}},
-		}).
-		Post(apiEndpoint)
-
+	resp, err := client.CreateChatCompletion(
+		context.Background(),
+		openai.ChatCompletionRequest{
+			Model: openai.GPT3Dot5Turbo,
+			Messages: []openai.ChatCompletionMessage{
+				{
+					Role:    openai.ChatMessageRoleUser,
+					Content: query,
+				},
+			},
+		},
+	)
 	if err != nil {
 		return "", err
 	}
-
-	body := response.Body()
-
-	var data map[string]interface{}
-	err = json.Unmarshal(body, &data)
-
-	if err != nil {
-		return "", err
-	}
-
-	content := data["choices"].([]interface{})[0].(map[string]interface{})["message"].(map[string]interface{})["content"].(string)
-
-	return content, nil
+	return resp.Choices[0].Message.Content, nil
 }
 
 func convertTextToAudioAndSaveMp3ToLocation(text string, location string) error {
-	speech := htgotts.Speech{Folder: location, Language: voices.English, Handler: &handlers.Native{}}
-	err := speech.Speak(text)
-	return err
+	resp, err := client.CreateSpeech(
+		context.Background(),
+		openai.CreateSpeechRequest{
+			Model: openai.TTSModel1,
+			Input: text,
+			Voice: openai.VoiceEcho,
+		},
+	)
+	if err != nil {
+		return err
+	}
+	f, err := os.Create(location + "/response.mp3")
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = io.Copy(f, resp.ReadCloser)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func playMp3Response() error {
+	f, err := os.Open("audio/response.mp3")
+	if err != nil {
+		return err
+	}
+	streamer, format, err := mp3.Decode(f)
+	if err != nil {
+		return err
+	}
+	defer streamer.Close()
+
+	speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/10))
+
+	done := make(chan bool)
+	speaker.Play(beep.Seq(streamer, beep.Callback(func() {
+		done <- true
+	})))
+	<-done
+
+	return nil
 }
 
 func main() {
@@ -136,6 +151,10 @@ func main() {
 	}
 	fmt.Println(answer)
 	err = convertTextToAudioAndSaveMp3ToLocation(answer, "audio")
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = playMp3Response()
 	if err != nil {
 		fmt.Println(err)
 	}
