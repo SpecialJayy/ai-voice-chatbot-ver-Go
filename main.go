@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"syscall"
 	"time"
 	"unsafe"
@@ -142,9 +143,19 @@ func playMp3Response() error {
 	return nil
 }
 
+func convert(inputFileName, outputFileName string) error {
+	cmd := exec.Command("C:\\\\LAME\\\\lame.exe", inputFileName, outputFileName)
+	err := cmd.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return nil
+}
+
 func main() {
 	record()
-	query := transcribe("mic.wav")
+	convert("mic.wav", "mic.mp3")
+	query := transcribe("mic.mp3")
 	answer, err := sendQueryToChatGpt(query)
 	if err != nil {
 		fmt.Println(err)
@@ -158,4 +169,5 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
+
 }
