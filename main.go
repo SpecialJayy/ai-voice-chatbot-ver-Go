@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/faiface/beep"
-	"github.com/faiface/beep/mp3"
 	"github.com/faiface/beep/speaker"
+	"github.com/faiface/beep/wav"
 	"github.com/sashabaranov/go-openai"
 	"io"
 	"log"
@@ -47,7 +47,7 @@ func record() {
 	fmt.Println("Press any key to stop listening")
 	fmt.Scanln()
 
-	//time.Sleep(10 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	i = MCIWorker("save capture audio/mic.wav", "", 0, 0)
 	if i != 0 {
@@ -79,14 +79,19 @@ func transcribe(fileName string) string {
 }
 
 func sendQueryToChatGpt(query string) (string, error) {
+	modifiedQuery := query + "Odpowiedz po polsku. Używaj prostego języka. Nie rób błędów ortograficznych. Odpowiedź napisz jak najzwięźlej potrafisz. Odpowiedź podaj maksymalnie w trzech zdaniach."
 	resp, err := client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
 			Model: openai.GPT3Dot5Turbo,
 			Messages: []openai.ChatCompletionMessage{
 				{
+					Role:    openai.ChatMessageRoleSystem,
+					Content: "Nazywasz się \"Miś Mądrala\". Jesteś przyjaznym misiem, który odpowiada dzieciom na różne pytania. Zapytany o to kim jesteś odpowiesz, że jesteś \"Misiem Mądralą\".",
+				},
+				{
 					Role:    openai.ChatMessageRoleUser,
-					Content: query,
+					Content: modifiedQuery,
 				},
 			},
 		},
@@ -121,12 +126,18 @@ func convertTextToAudioAndSaveMp3ToLocation(text string, location string) error 
 	return nil
 }
 
+func piper(text string) error {
+	cmd, err := exec.Command("cmd", "/C", "echo "+text+" | .\\piper\\piper.exe --model .\\piper\\pl_PL-darkman-medium.onnx --output_file audio/response.wav").Output()
+	fmt.Println(string(cmd))
+	return err
+}
+
 func playMp3Response() error {
-	f, err := os.Open("audio/response.mp3")
+	f, err := os.Open("audio/response.wav")
 	if err != nil {
 		return err
 	}
-	streamer, format, err := mp3.Decode(f)
+	streamer, format, err := wav.Decode(f)
 	if err != nil {
 		return err
 	}
@@ -144,30 +155,34 @@ func playMp3Response() error {
 }
 
 func convert(inputFileName, outputFileName string) error {
-	cmd := exec.Command("C:\\\\LAME\\\\lame.exe", inputFileName, outputFileName)
+	cmd := exec.Command("LAME/lame.exe", inputFileName, outputFileName)
 	err := cmd.Run()
-	if err != nil {
-		log.Fatal(err)
-	}
-	return nil
+	return err
 }
 
 func main() {
 	record()
-	convert("mic.wav", "mic.mp3")
+	err := convert("audio/mic.wav", "audio/mic.mp3")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	query := transcribe("mic.mp3")
 	answer, err := sendQueryToChatGpt(query)
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 	fmt.Println(answer)
-	err = convertTextToAudioAndSaveMp3ToLocation(answer, "audio")
+	//err = convertTextToAudioAndSaveMp3ToLocation(answer, "audio")
+	err = piper(answer)
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 	err = playMp3Response()
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Beep error", err)
+		return
 	}
-
 }

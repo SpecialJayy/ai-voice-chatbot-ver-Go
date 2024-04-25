@@ -6,6 +6,7 @@ require (
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/faiface/beep v1.1.0 // indirect
+	github.com/gopxl/beep v1.4.1 // indirect
 	github.com/hajimehoshi/go-mp3 v0.3.4 // indirect
 	github.com/hajimehoshi/oto v1.0.1 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
