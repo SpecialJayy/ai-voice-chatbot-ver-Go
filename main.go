@@ -1,13 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	gosia "github.com/JKGplay/piper-voice-gosia"
+	"github.com/amitybell/piper"
 	"github.com/faiface/beep"
-	"github.com/faiface/beep/mp3"
 	"github.com/faiface/beep/speaker"
+	"github.com/faiface/beep/wav"
 	"github.com/sashabaranov/go-openai"
-	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -47,7 +49,7 @@ func record() {
 	fmt.Println("Press any key to stop listening")
 	fmt.Scanln()
 
-	//time.Sleep(10 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	i = MCIWorker("save capture audio/mic.wav", "", 0, 0)
 	if i != 0 {
@@ -79,14 +81,19 @@ func transcribe(fileName string) string {
 }
 
 func sendQueryToChatGpt(query string) (string, error) {
+	modifiedQuery := query + "Odpowiedz po polsku. Używaj prostego języka. Nie rób błędów ortograficznych. Odpowiedź napisz jak najzwięźlej potrafisz. Odpowiedź podaj maksymalnie w trzech zdaniach."
 	resp, err := client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
 			Model: openai.GPT3Dot5Turbo,
 			Messages: []openai.ChatCompletionMessage{
 				{
+					Role:    openai.ChatMessageRoleSystem,
+					Content: "Nazywasz się \"Miś Mądrala\". Jesteś przyjaznym misiem, który odpowiada dzieciom na różne pytania. Zapytany o to kim jesteś odpowiesz, że jesteś \"Misiem Mądralą\".",
+				},
+				{
 					Role:    openai.ChatMessageRoleUser,
-					Content: query,
+					Content: modifiedQuery,
 				},
 			},
 		},
@@ -97,43 +104,21 @@ func sendQueryToChatGpt(query string) (string, error) {
 	return resp.Choices[0].Message.Content, nil
 }
 
-func convertTextToAudioAndSaveMp3ToLocation(text string, location string) error {
-	resp, err := client.CreateSpeech(
-		context.Background(),
-		openai.CreateSpeechRequest{
-			Model: openai.TTSModel1,
-			Input: text,
-			Voice: openai.VoiceEcho,
-		},
-	)
+func piperAndPlayResponse(text string) error {
+	tts, err := piper.New("", gosia.Asset)
 	if err != nil {
 		return err
 	}
-	f, err := os.Create(location + "/response.mp3")
+	wavBytes, err := tts.Synthesize(text)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	_, err = io.Copy(f, resp.ReadCloser)
+	r := bytes.NewReader(wavBytes)
+	streamer, format, err := wav.Decode(r)
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-func playMp3Response() error {
-	f, err := os.Open("audio/response.mp3")
-	if err != nil {
-		return err
-	}
-	streamer, format, err := mp3.Decode(f)
-	if err != nil {
-		return err
-	}
-	defer streamer.Close()
-
 	speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/10))
-
 	done := make(chan bool)
 	speaker.Play(beep.Seq(streamer, beep.Callback(func() {
 		done <- true
@@ -144,30 +129,28 @@ func playMp3Response() error {
 }
 
 func convert(inputFileName, outputFileName string) error {
-	cmd := exec.Command("C:\\\\LAME\\\\lame.exe", inputFileName, outputFileName)
+	cmd := exec.Command("LAME/lame.exe", inputFileName, outputFileName)
 	err := cmd.Run()
-	if err != nil {
-		log.Fatal(err)
-	}
-	return nil
+	return err
 }
 
 func main() {
 	record()
-	convert("mic.wav", "mic.mp3")
+	err := convert("audio/mic.wav", "audio/mic.mp3")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	query := transcribe("mic.mp3")
 	answer, err := sendQueryToChatGpt(query)
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 	fmt.Println(answer)
-	err = convertTextToAudioAndSaveMp3ToLocation(answer, "audio")
+	err = piperAndPlayResponse(answer)
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
-	err = playMp3Response()
-	if err != nil {
-		fmt.Println(err)
-	}
-
 }
