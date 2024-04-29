@@ -4,6 +4,7 @@ go 1.22.2
 
 require (
 	github.com/JKGplay/piper-voice-darkman v0.0.0-20240429083950-0b16bff88f7a // indirect
+	github.com/JKGplay/piper-voice-gosia v0.0.0-20240429104254-5c39279a8071 // indirect
 	github.com/adrg/xdg v0.4.0 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/amitybell/piper v0.0.0-20240130090909-b170e42b1e09 // indirect

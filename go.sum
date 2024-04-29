@@ -3,6 +3,8 @@ github.com/AssemblyAI/assemblyai-go-sdk v1.5.0/go.mod h1:ytTvsjAVL+nXZnzBfDagQ/L
 github.com/DATA-DOG/go-sqlmock v1.3.3/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
 github.com/JKGplay/piper-voice-darkman v0.0.0-20240429083950-0b16bff88f7a h1:fY1XCPtKkZ7VUxFFmuUpptupp0nn/aN3pxtAJ8wRvNw=
 github.com/JKGplay/piper-voice-darkman v0.0.0-20240429083950-0b16bff88f7a/go.mod h1:DTJ8TBREA7HuwSWK/2EzVuTV/q/WxMMWnA3ke37TgPs=
+github.com/JKGplay/piper-voice-gosia v0.0.0-20240429104254-5c39279a8071 h1:iMCbP52TeVlKjoGS/bTFRGVGwxFEgHyCWJw8HhN0FHc=
+github.com/JKGplay/piper-voice-gosia v0.0.0-20240429104254-5c39279a8071/go.mod h1:j13aZ9iis217SikLszfYDJ6DGBtb4ahR5tEpT8NHu20=
 github.com/adrg/xdg v0.4.0 h1:RzRqFcjH4nE5C6oTAxhBtoE2IRyjBSa62SCbyPidvls=
 github.com/adrg/xdg v0.4.0/go.mod h1:N6ag73EX4wyxeaoeHctc1mas01KZgsj5tYiAIwqJE/E=
 github.com/agext/levenshtein v1.2.3 h1:YB2fHEn0UJagG8T1rrWknE3ZQzWM06O8AMAatNn7lmo=

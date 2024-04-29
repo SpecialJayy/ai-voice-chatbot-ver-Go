@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	darkman "github.com/JKGplay/piper-voice-darkman"
+	gosia "github.com/JKGplay/piper-voice-gosia"
 	"github.com/amitybell/piper"
 	"github.com/faiface/beep"
 	"github.com/faiface/beep/speaker"
@@ -105,7 +105,7 @@ func sendQueryToChatGpt(query string) (string, error) {
 }
 
 func piperAndPlayResponse(text string) error {
-	tts, err := piper.New("", darkman.Asset)
+	tts, err := piper.New("", gosia.Asset)
 	if err != nil {
 		return err
 	}
